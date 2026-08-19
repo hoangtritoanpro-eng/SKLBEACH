@@ -1,7 +1,7 @@
 const BASE_URL = import.meta.env.VITE_GAS_URL;
 
 const apiCache = new Map();
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION_MS = 2000; // 2 seconds to avoid rapid re-renders but ensure fresh data
 
 // Hàng đợi tuần tự (Queue) để tránh bị Google chặn do gọi quá nhiều request cùng lúc (Lỗi 429 / Trả về HTML thay vì JSON)
 let requestQueue = Promise.resolve();
