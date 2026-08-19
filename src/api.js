@@ -1,16 +1,37 @@
 const BASE_URL = import.meta.env.VITE_GAS_URL;
 
+let requestQueue = Promise.resolve();
+
 export async function api(action, data = {}, userEmail = '') {
   if (!BASE_URL) throw new Error('VITE_GAS_URL chưa được cấu hình trong file .env');
-  const response = await fetch(BASE_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, email: userEmail, ...data }),
+  
+  return new Promise((resolve, reject) => {
+    requestQueue = requestQueue.then(async () => {
+      try {
+        const response = await fetch(BASE_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, email: userEmail, ...data }),
+        });
+        
+        const text = await response.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (e) {
+          throw new Error('Dữ liệu trả về bị lỗi (Có thể Google đang chặn do quá tải, vui lòng tải lại trang).');
+        }
+
+        if (!json.ok) throw new Error(json.error || 'Lỗi không xác định');
+        resolve(json.data);
+      } catch (err) {
+        reject(err);
+      }
+      // Thêm độ trễ nhỏ giữa các request để tránh bị Google Apps Script chặn do spam
+      await new Promise(r => setTimeout(r, 400));
+    });
   });
-  const json = await response.json();
-  if (!json.ok) throw new Error(json.error || 'Lỗi không xác định');
-  return json.data;
 }
 
 export const fmtCurrency = (n) =>
