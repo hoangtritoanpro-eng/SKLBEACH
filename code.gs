@@ -258,11 +258,30 @@ function getClasses(body, email) {
 
   // TẤT CẢ các role (ADMIN, TEACHER, TA) chỉ xem được lớp mà mình được phân công
   // Ngoại trừ trường hợp yêu cầu lấy tất cả lớp (allClasses = true) cho mục báo cáo vi phạm, tích điểm
-  if (!body.allClasses && u.Role !== 'ADMIN') { // Also allow ADMIN to see all classes just in case
+    if (u.Role === 'ADMIN') {
+    // Admin only sees center classes (CLS)
+    all = all.filter(function(c) {
+      return String(c.ClassID).indexOf('PRI') !== 0;
+    });
+  } else {
+    // Teacher sees their assigned classes
     var assigned = sheetToObjects(getSheet(SHEET.TCH_CLASSES))
       .filter(function(x){ return x.TeacherEmail === email; })
       .map(function(x){ return x.ClassID; });
-    all = all.filter(function(c){ return assigned.includes(c.ClassID); });
+      
+    if (body.myClassesOnly) {
+      // Classes page: only see assigned classes (whether PRI or CLS)
+      all = all.filter(function(c) {
+        return assigned.includes(c.ClassID);
+      });
+    } else {
+      // Violations, Points, etc: see all Center classes (CLS) + their own assigned PRI classes
+      all = all.filter(function(c) {
+        var isCenter = String(c.ClassID).indexOf('PRI') !== 0;
+        var isMine = assigned.includes(c.ClassID);
+        return isCenter || isMine;
+      });
+    }
   }
 
   return ok(all);
@@ -271,7 +290,15 @@ function getClasses(body, email) {
 function addClass(body, email) {
   requireRole(email, ['ADMIN', 'TEACHER']);
   var sheet = getSheet(SHEET.CLASSES);
-  var id = generateId('CLS', sheet);
+  var u = requireAuth(email);
+  var prefix = (u.Role === 'TEACHER') ? 'PRI' : 'CLS';
+  var id = generateId(prefix, sheet);
+  
+  var gvcn = body.gvcnEmail || '';
+  if (u.Role === 'TEACHER' && !gvcn) {
+    gvcn = email;
+  }
+
   var arr = [
     id,
     body.className || '',
@@ -279,7 +306,7 @@ function addClass(body, email) {
     body.grade     || '',
     body.startDate || today(),
     body.status    || 'ACTIVE',
-    body.gvcnEmail || '',
+    gvcn,
   ];
   sheet.appendRow(arr);
   

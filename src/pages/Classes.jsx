@@ -52,7 +52,7 @@ export default function Classes() {
   async function loadAll() {
     try {
       const [cls, stu, tch, vio] = await Promise.all([
-        api('getClasses', {}, user.email),
+        api('getClasses', { myClassesOnly: true }, user.email),
         (isAdmin || user.role === 'TEACHER') ? api('getStudents', {}, user.email) : Promise.resolve([]),
         isAdmin ? api('getTeachers', {}, user.email) : Promise.resolve([]),
         api('getViolations', {}, user.email),
