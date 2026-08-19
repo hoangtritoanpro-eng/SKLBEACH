@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api';
 import PublicNotices from '../components/public/PublicNotices';
 import PublicLibrary from '../components/public/PublicLibrary';
 import PublicClassInfo from '../components/public/PublicClassInfo';
