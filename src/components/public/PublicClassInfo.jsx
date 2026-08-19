@@ -12,12 +12,7 @@ export default function PublicClassInfo({ data }) {
   const allPoints = data?.points || [];
   const allStudents = data?.students || [];
 
-  if (!data) return (
-    <div className="card">
-      <div className="card-header" style={{ background: 'var(--gradient)', color: 'white' }}>🏫 Thông tin toàn trường</div>
-      <div className="card-body"><div className="loading-state"><div className="spinner" /></div></div>
-    </div>
-  );
+
 
   useEffect(() => {
     if (activeTab === 'lessons') {
@@ -43,6 +38,13 @@ export default function PublicClassInfo({ data }) {
     });
     return Object.keys(map).map(k => ({ name: k, total: map[k] })).sort((a,b) => b.total - a.total);
   }, [allPoints, allStudents]);
+
+  if (!data) return (
+    <div className="card">
+      <div className="card-header" style={{ background: 'var(--gradient)', color: 'white' }}>🏫 Thông tin toàn trường</div>
+      <div className="card-body"><div className="loading-state"><div className="spinner" /></div></div>
+    </div>
+  );
 
   return (
     <div className="card">

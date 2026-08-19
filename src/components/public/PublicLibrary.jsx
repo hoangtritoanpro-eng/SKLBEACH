@@ -6,14 +6,8 @@ export default function PublicLibrary({ library: docs }) {
   const [currentFolder, setCurrentFolder] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  if (!docs) return (
-    <div className="card">
-      <div className="card-header" style={{ background: 'var(--gradient)', color: 'white' }}>📚 Thư viện tài liệu</div>
-      <div className="card-body"><div className="loading-state"><div className="spinner" /></div></div>
-    </div>
-  );
-
   const categories = useMemo(() => {
+    if (!docs) return [];
     const cats = {};
     docs.forEach(doc => {
       if (!cats[doc.Category]) cats[doc.Category] = 0;
@@ -25,6 +19,7 @@ export default function PublicLibrary({ library: docs }) {
   }, [docs]);
 
   const displayedDocs = useMemo(() => {
+    if (!docs) return [];
     let filtered = docs.filter(d => d.Title !== '.folder');
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -35,6 +30,13 @@ export default function PublicLibrary({ library: docs }) {
     }
     return [];
   }, [docs, currentFolder, searchQuery]);
+
+  if (!docs) return (
+    <div className="card">
+      <div className="card-header" style={{ background: 'var(--gradient)', color: 'white' }}>📚 Thư viện tài liệu</div>
+      <div className="card-body"><div className="loading-state"><div className="spinner" /></div></div>
+    </div>
+  );
 
   const renderFileCard = (doc) => (
     <div key={doc.DocID} className="file-card">
