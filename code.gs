@@ -143,6 +143,7 @@ function doPost(e) {
 
     // Public actions (no auth needed)
     if (action === 'getStudentReport') return getStudentReport(body);
+    if (action === 'getPublicDashboard') return getPublicDashboard(body, email);
 
     // Auth required
     switch (action) {

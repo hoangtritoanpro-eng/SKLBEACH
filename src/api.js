@@ -3,7 +3,10 @@ const BASE_URL = import.meta.env.VITE_GAS_URL;
 const apiCache = new Map();
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
-export async function api(action, data = {}, userEmail = '') {
+// Hàng đợi tuần tự (Queue) để tránh bị Google chặn do gọi quá nhiều request cùng lúc (Lỗi 429 / Trả về HTML thay vì JSON)
+let requestQueue = Promise.resolve();
+
+export function api(action, data = {}, userEmail = '') {
   if (!BASE_URL) throw new Error('VITE_GAS_URL chưa được cấu hình trong file .env');
   
   const isGet = action.startsWith('get');
@@ -13,18 +16,16 @@ export async function api(action, data = {}, userEmail = '') {
   if (isGet && apiCache.has(cacheKey)) {
     const cached = apiCache.get(cacheKey);
     if (Date.now() - cached.timestamp < CACHE_DURATION_MS) {
-      // Trả về dữ liệu ngay lập tức từ bộ nhớ đệm
-      return cached.data;
+      return Promise.resolve(cached.data);
     } else {
-      apiCache.delete(cacheKey); // Xóa nếu hết hạn
+      apiCache.delete(cacheKey);
     }
   }
 
-  // Use Vercel Proxy in production to bypass Google Multiple Accounts bug.
-  // In local dev, hit GAS directly (since Vite doesn't serve the api/ folder).
-  const fetchUrl = import.meta.env.DEV ? BASE_URL : '/api/gas';
-  
-  try {
+  // Khối thực thi thực sự gửi request lên server
+  const execute = async () => {
+    const fetchUrl = import.meta.env.DEV ? BASE_URL : '/api/gas';
+    
     const response = await fetch(fetchUrl, {
       method: 'POST',
       redirect: 'follow',
@@ -37,23 +38,27 @@ export async function api(action, data = {}, userEmail = '') {
     try {
       json = JSON.parse(text);
     } catch (e) {
+      // Bắt lỗi Google trả về HTML do quá tải
       throw new Error('Dữ liệu trả về bị lỗi (Có thể Google đang chặn do quá tải, vui lòng tải lại trang).');
     }
 
     if (!json.ok) throw new Error(json.error || 'Lỗi không xác định');
     
-    // 2. Lưu vào Cache nếu thành công
+    // Lưu vào Cache hoặc xóa Cache
     if (isGet) {
       apiCache.set(cacheKey, { data: json.data, timestamp: Date.now() });
     } else {
-      // 3. Xóa toàn bộ Cache nếu có tác vụ thay đổi dữ liệu (thêm/sửa/xóa)
       apiCache.clear();
     }
 
     return json.data;
-  } catch (err) {
-    throw err;
-  }
+  };
+
+  // Đưa vào hàng đợi để chạy tuần tự (cái này chạy xong mới tới cái kia)
+  const nextTask = requestQueue.then(execute, execute);
+  requestQueue = nextTask.catch(() => {}); // Catch để không làm đứt chuỗi queue nếu có task bị lỗi
+  
+  return nextTask;
 }
 
 export const fmtCurrency = (n) =>

@@ -19,7 +19,7 @@ export default function Points() {
   const [form, setForm] = useState({ date: today(), studentId: '', pointsAdded: 10, reason: '' });
 
   useEffect(() => {
-    api('getClasses', { allClasses: true }, user.email).then(setClasses).catch(e => toast(e.message, 'error'));
+    api('getClasses', {}, user.email).then(setClasses).catch(e => toast(e.message, 'error'));
   }, []);
 
   useEffect(() => {
