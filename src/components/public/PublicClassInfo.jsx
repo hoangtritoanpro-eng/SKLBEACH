@@ -1,37 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api, fmtDate } from '../../api';
 
-export default function PublicClassInfo() {
-  const [classes, setClasses] = useState([]);
+export default function PublicClassInfo({ data }) {
   const [selectedClass, setSelectedClass] = useState('');
-  
   const [lessons, setLessons] = useState([]);
-  
-  // Global data
-  const [allPoints, setAllPoints] = useState([]);
-  const [allStudents, setAllStudents] = useState([]);
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('lessons');
 
-  useEffect(() => {
-    // Load initial global data
-    setLoading(true);
-    Promise.all([
-      api('getClasses', { public: true }),
-      api('getPoints', { public: true }),
-      api('getStudents', { public: true }) // Modified in backend to return limited fields for privacy
-    ]).then(([cls, pts, stu]) => {
-      setClasses(cls || []);
-      setAllPoints(pts || []);
-      setAllStudents(stu || []);
-    }).catch(e => {
-      setError('Lỗi tải dữ liệu: ' + e.message);
-    }).finally(() => {
-      setLoading(false);
-    });
-  }, []);
+  const classes = data?.classes || [];
+  const allPoints = data?.points || [];
+  const allStudents = data?.students || [];
+
+  if (!data) return (
+    <div className="card">
+      <div className="card-header" style={{ background: 'var(--gradient)', color: 'white' }}>🏫 Thông tin toàn trường</div>
+      <div className="card-body"><div className="loading-state"><div className="spinner" /></div></div>
+    </div>
+  );
 
   useEffect(() => {
     if (activeTab === 'lessons') {

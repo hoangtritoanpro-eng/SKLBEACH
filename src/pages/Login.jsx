@@ -31,6 +31,15 @@ export default function Login() {
     }
   };
 
+  const [publicData, setPublicData] = useState(null);
+  const [publicError, setPublicError] = useState('');
+
+  useEffect(() => {
+    api('getPublicDashboard', { public: true })
+      .then(res => setPublicData(res))
+      .catch(e => setPublicError(e.message));
+  }, []);
+
   return (
     <div className="public-dashboard">
       <div className="public-content fade-up">
@@ -41,15 +50,17 @@ export default function Login() {
           <p style={{ color: 'var(--text-muted)' }}>Dành cho Phụ huynh và Học sinh tra cứu thông tin nhanh</p>
         </div>
 
+        {publicError && <div className="login-error" style={{ marginBottom: '16px' }}>⚠ Lỗi tải dữ liệu: {publicError}. Vui lòng liên hệ Admin để cập nhật hệ thống.</div>}
+
         <div className="public-grid">
           <div className="public-col">
-            <PublicNotices />
+            <PublicNotices notices={publicData?.notices} />
             <div style={{ marginTop: '20px' }}>
-              <PublicClassInfo />
+              <PublicClassInfo data={publicData} />
             </div>
           </div>
           <div className="public-col">
-            <PublicLibrary />
+            <PublicLibrary library={publicData?.library} />
           </div>
         </div>
       </div>

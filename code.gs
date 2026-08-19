@@ -1136,3 +1136,21 @@ function saveExam(body, email) {
   sheet.appendRow([ id, body.name || 'Đề thi mới', matrixStr, qListStr, today() ]);
   return ok({ examId: id });
 }
+
+function getPublicDashboard(body, email) {
+  var classes = sheetToObjects(getSheet(SHEET.CLASSES)).filter(function(c){ return String(c.Status).toUpperCase() !== 'INACTIVE'; });
+  var notices = sheetToObjects(getSheet(SHEET.NOTICES));
+  var library = sheetToObjects(getSheet(SHEET.LIBRARY));
+  var points = sheetToObjects(getSheet(SHEET.POINTS));
+  var students = sheetToObjects(getSheet(SHEET.STUDENTS)).map(function(s) {
+    return { StudentID: s.StudentID, FullName: s.FullName };
+  });
+
+  return ok({
+    classes: classes,
+    notices: notices,
+    library: library,
+    points: points,
+    students: students
+  });
+}

@@ -1,7 +1,5 @@
 const BASE_URL = import.meta.env.VITE_GAS_URL;
 
-let requestQueue = Promise.resolve();
-
 export async function api(action, data = {}, userEmail = '') {
   if (!BASE_URL) throw new Error('VITE_GAS_URL chưa được cấu hình trong file .env');
   
@@ -9,33 +7,27 @@ export async function api(action, data = {}, userEmail = '') {
   // In local dev, hit GAS directly (since Vite doesn't serve the api/ folder).
   const fetchUrl = import.meta.env.DEV ? BASE_URL : '/api/gas';
   
-  return new Promise((resolve, reject) => {
-    requestQueue = requestQueue.then(async () => {
-      try {
-        const response = await fetch(fetchUrl, {
-          method: 'POST',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action, email: userEmail, ...data }),
-        });
-        
-        const text = await response.text();
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch (e) {
-          throw new Error('Dữ liệu trả về bị lỗi (Có thể Google đang chặn do quá tải, vui lòng tải lại trang).');
-        }
-
-        if (!json.ok) throw new Error(json.error || 'Lỗi không xác định');
-        resolve(json.data);
-      } catch (err) {
-        reject(err);
-      }
-      // Thêm độ trễ nhỏ giữa các request để tránh bị Google Apps Script chặn do spam
-      await new Promise(r => setTimeout(r, 400));
+  try {
+    const response = await fetch(fetchUrl, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, email: userEmail, ...data }),
     });
-  });
+    
+    const text = await response.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Dữ liệu trả về bị lỗi (Có thể Google đang chặn do quá tải, vui lòng tải lại trang).');
+    }
+
+    if (!json.ok) throw new Error(json.error || 'Lỗi không xác định');
+    return json.data;
+  } catch (err) {
+    throw err;
+  }
 }
 
 export const fmtCurrency = (n) =>
