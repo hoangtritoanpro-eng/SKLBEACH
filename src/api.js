@@ -1,8 +1,25 @@
 const BASE_URL = import.meta.env.VITE_GAS_URL;
 
+const apiCache = new Map();
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function api(action, data = {}, userEmail = '') {
   if (!BASE_URL) throw new Error('VITE_GAS_URL chưa được cấu hình trong file .env');
   
+  const isGet = action.startsWith('get');
+  const cacheKey = JSON.stringify({ action, userEmail, data });
+
+  // 1. Kiểm tra Cache (nếu là tác vụ đọc)
+  if (isGet && apiCache.has(cacheKey)) {
+    const cached = apiCache.get(cacheKey);
+    if (Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+      // Trả về dữ liệu ngay lập tức từ bộ nhớ đệm
+      return cached.data;
+    } else {
+      apiCache.delete(cacheKey); // Xóa nếu hết hạn
+    }
+  }
+
   // Use Vercel Proxy in production to bypass Google Multiple Accounts bug.
   // In local dev, hit GAS directly (since Vite doesn't serve the api/ folder).
   const fetchUrl = import.meta.env.DEV ? BASE_URL : '/api/gas';
@@ -24,6 +41,15 @@ export async function api(action, data = {}, userEmail = '') {
     }
 
     if (!json.ok) throw new Error(json.error || 'Lỗi không xác định');
+    
+    // 2. Lưu vào Cache nếu thành công
+    if (isGet) {
+      apiCache.set(cacheKey, { data: json.data, timestamp: Date.now() });
+    } else {
+      // 3. Xóa toàn bộ Cache nếu có tác vụ thay đổi dữ liệu (thêm/sửa/xóa)
+      apiCache.clear();
+    }
+
     return json.data;
   } catch (err) {
     throw err;
