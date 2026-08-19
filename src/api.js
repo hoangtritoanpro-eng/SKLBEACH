@@ -5,10 +5,14 @@ let requestQueue = Promise.resolve();
 export async function api(action, data = {}, userEmail = '') {
   if (!BASE_URL) throw new Error('VITE_GAS_URL chưa được cấu hình trong file .env');
   
+  // Use Vercel Proxy in production to bypass Google Multiple Accounts bug.
+  // In local dev, hit GAS directly (since Vite doesn't serve the api/ folder).
+  const fetchUrl = import.meta.env.DEV ? BASE_URL : '/api/gas';
+  
   return new Promise((resolve, reject) => {
     requestQueue = requestQueue.then(async () => {
       try {
-        const response = await fetch(BASE_URL, {
+        const response = await fetch(fetchUrl, {
           method: 'POST',
           redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
