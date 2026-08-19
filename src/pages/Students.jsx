@@ -11,6 +11,7 @@ export default function Students() {
   const { user } = useAuth();
   const toast = useToast();
   const [students, setStudents] = useState([]);
+  const [violations, setViolations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -19,7 +20,16 @@ export default function Students() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api('getStudents', {}, user.email).then(d => setStudents(d || [])).catch(e => toast(e.message, 'error')).finally(() => setLoading(false));
+    Promise.all([
+      api('getStudents', {}, user.email),
+      api('getViolations', {}, user.email)
+    ])
+    .then(([stu, vio]) => {
+      setStudents(stu || []);
+      setViolations(vio || []);
+    })
+    .catch(e => toast(e.message, 'error'))
+    .finally(() => setLoading(false));
   }, []);
 
   function openAdd() { setEditing(null); setForm(EMPTY); setShowModal(true); }
@@ -188,10 +198,20 @@ export default function Students() {
             <table>
               <thead><tr><th>Mã</th><th>Họ tên</th><th>Phụ huynh</th><th>SĐT</th><th>Trạng thái</th><th>Link PH</th><th>Thao tác</th></tr></thead>
               <tbody>
-                {filtered.map(s => (
+                {filtered.map(s => {
+                  const vCount = violations.filter(v => v.StudentID === s.StudentID).length;
+                  return (
                   <tr key={s.StudentID}>
                     <td><span style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-muted)' }}>{s.StudentID}</span></td>
-                    <td><strong>{s.FullName}</strong>{s.Note && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{s.Note}</div>}</td>
+                    <td>
+                      <strong>{s.FullName}</strong>
+                      {vCount >= 3 && (
+                        <span className="badge badge-danger" style={{ marginLeft: 8, fontSize: '0.65rem', padding: '2px 6px' }} title="Học sinh này vi phạm thường xuyên">
+                          🚨 {vCount} vi phạm
+                        </span>
+                      )}
+                      {s.Note && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{s.Note}</div>}
+                    </td>
                     <td>{s.ParentName || '—'}</td>
                     <td>{s.ParentPhone || '—'}</td>
                     <td><span className={`badge ${s.Status === 'ACTIVE' ? 'badge-success' : 'badge-danger'}`}>{s.Status === 'ACTIVE' ? 'Đang học' : 'Nghỉ'}</span></td>
@@ -208,7 +228,8 @@ export default function Students() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

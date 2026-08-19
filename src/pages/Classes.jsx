@@ -15,6 +15,7 @@ export default function Classes() {
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [violations, setViolations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
@@ -50,14 +51,16 @@ export default function Classes() {
 
   async function loadAll() {
     try {
-      const [cls, stu, tch] = await Promise.all([
+      const [cls, stu, tch, vio] = await Promise.all([
         api('getClasses', {}, user.email),
         (isAdmin || user.role === 'TEACHER') ? api('getStudents', {}, user.email) : Promise.resolve([]),
         isAdmin ? api('getTeachers', {}, user.email) : Promise.resolve([]),
+        api('getViolations', {}, user.email),
       ]);
       setClasses(cls || []);
       setStudents(stu || []);
       setTeachers(tch || []);
+      setViolations(vio || []);
     } catch (e) { toast(e.message, 'error'); }
     finally { setLoading(false); }
   }
@@ -542,10 +545,17 @@ export default function Classes() {
                     <table>
                       <thead><tr><th>Học sinh</th><th>SĐT phụ huynh</th><th>Link phụ huynh</th>{(isAdmin || user.role === 'TEACHER') && <th></th>}</tr></thead>
                       <tbody>
-                        {roster.map(s => (
+                        {roster.map(s => {
+                          const vCount = violations.filter(v => v.StudentID === s.StudentID).length;
+                          return (
                           <tr key={s.StudentID} style={s.Note ? { backgroundColor: '#fef2f2' } : {}}>
                             <td>
                               <strong style={{ color: s.Note ? '#ef4444' : 'inherit' }}>{s.FullName}</strong>
+                              {vCount >= 3 && (
+                                <span className="badge badge-danger" style={{ marginLeft: 8, fontSize: '0.65rem', padding: '2px 6px' }} title="Học sinh này vi phạm thường xuyên">
+                                  🚨 {vCount} vi phạm
+                                </span>
+                              )}
                               <div>
                                 {editingNoteId === s.StudentID ? (
                                   <input 
@@ -582,7 +592,8 @@ export default function Classes() {
                               <td><button className="btn btn-danger btn-sm" onClick={() => removeStudent(s.StudentID)}>Xóa</button></td>
                             )}
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
