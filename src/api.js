@@ -11,7 +11,6 @@ export async function api(action, data = {}, userEmail = '') {
         const response = await fetch(BASE_URL, {
           method: 'POST',
           redirect: 'follow',
-          credentials: 'omit',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action, email: userEmail, ...data }),
         });
