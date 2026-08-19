@@ -52,7 +52,7 @@ export default function Classes() {
   async function loadAll() {
     try {
       const [cls, stu, tch, vio] = await Promise.all([
-        api('getClasses', { myClassesOnly: true }, user.email),
+        api('getClasses', {}, user.email),
         (isAdmin || user.role === 'TEACHER') ? api('getStudents', {}, user.email) : Promise.resolve([]),
         isAdmin ? api('getTeachers', {}, user.email) : Promise.resolve([]),
         api('getViolations', {}, user.email),
@@ -186,7 +186,7 @@ export default function Classes() {
 
   async function openJoinClass() {
     try {
-      const res = await api('getClasses', { allClasses: true }, user.email);
+      const res = await api('getClasses', { centerClassesOnly: true }, user.email);
       setAllClasses(res || []);
       setJoinClassId('');
       setShowJoinModal(true);

@@ -20,7 +20,7 @@ export default function Violations() {
   const [form, setForm] = useState({ date: today(), studentId: '', reason: '', severity: 'Minor', actionTaken: '' });
 
   useEffect(() => {
-    api('getClasses', {}, user.email).then(setClasses).catch(e => toast(e.message, 'error'));
+    api('getClasses', { centerClassesOnly: true }, user.email).then(setClasses).catch(e => toast(e.message, 'error'));
   }, []);
 
   useEffect(() => {

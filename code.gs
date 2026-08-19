@@ -258,29 +258,25 @@ function getClasses(body, email) {
 
   // TẤT CẢ các role (ADMIN, TEACHER, TA) chỉ xem được lớp mà mình được phân công
   // Ngoại trừ trường hợp yêu cầu lấy tất cả lớp (allClasses = true) cho mục báo cáo vi phạm, tích điểm
-    if (u.Role === 'ADMIN') {
+  if (u.Role === 'ADMIN') {
     // Admin only sees center classes (CLS)
     all = all.filter(function(c) {
       return String(c.ClassID).indexOf('PRI') !== 0;
     });
   } else {
-    // Teacher sees their assigned classes
+    // Teacher / TA
     var assigned = sheetToObjects(getSheet(SHEET.TCH_CLASSES))
       .filter(function(x){ return x.TeacherEmail === email; })
       .map(function(x){ return x.ClassID; });
       
-    if (body.myClassesOnly) {
-      // Classes page: only see assigned classes (whether PRI or CLS)
+    if (body.centerClassesOnly || body.allClasses) {
+      // Violations, Points, Join Class: ONLY see ALL Center classes (Admin's classes)
       all = all.filter(function(c) {
-        return assigned.includes(c.ClassID);
+        return String(c.ClassID).indexOf('PRI') !== 0;
       });
     } else {
-      // Violations, Points, etc: see all Center classes (CLS) + their own assigned PRI classes
-      all = all.filter(function(c) {
-        var isCenter = String(c.ClassID).indexOf('PRI') !== 0;
-        var isMine = assigned.includes(c.ClassID);
-        return isCenter || isMine;
-      });
+      // DEFAULT (Classes, Scores, Lessons, Attendance): only see assigned classes
+      all = all.filter(function(c){ return assigned.includes(c.ClassID); });
     }
   }
 
