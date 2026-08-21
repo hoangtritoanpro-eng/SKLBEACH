@@ -538,7 +538,8 @@ function importClassRoster(body, email) {
     var existing = allStudents.find(function(x) { 
       var phoneMatch = s.parentPhone && x.ParentPhone === String(s.parentPhone);
       var nameMatch = x.FullName && String(x.FullName).trim().toLowerCase() === String(s.fullName).trim().toLowerCase();
-      return phoneMatch || nameMatch;
+      var inThisClass = allEnrolls.some(function(e) { return e.StudentID === x.StudentID && e.ClassID === classId; });
+      return phoneMatch || (nameMatch && inThisClass);
     });
     
     var sId;
