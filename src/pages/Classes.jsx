@@ -45,6 +45,10 @@ export default function Classes() {
   const [joinClassId, setJoinClassId] = useState('');
   const [joining, setJoining] = useState(false);
 
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [newStudentForm, setNewStudentForm] = useState({ fullName: '', parentPhone: '', note: '' });
+  const [addingStudent, setAddingStudent] = useState(false);
+
   useEffect(() => {
     loadAll();
   }, []);
@@ -137,6 +141,34 @@ export default function Classes() {
       setRoster(r || []);
     } catch (e) { toast(e.message, 'error'); }
     finally { setEnrolling(false); }
+  }
+
+  async function addNewStudentAndEnroll() {
+    if (!newStudentForm.fullName.trim()) { toast('Vui lòng nhập tên học sinh', 'warning'); return; }
+    setAddingStudent(true);
+    try {
+      const res = await api('addStudent', newStudentForm, user.email);
+      const newStudentId = res.studentId;
+      // Also add to local students list
+      const newStudent = {
+        StudentID: newStudentId,
+        FullName: newStudentForm.fullName,
+        ParentPhone: newStudentForm.parentPhone,
+        Note: newStudentForm.note,
+        Status: 'ACTIVE'
+      };
+      setStudents(prev => [...prev, newStudent]);
+      
+      // Auto enroll
+      await api('enrollStudent', { studentId: newStudentId, classId: detail.ClassID }, user.email);
+      toast('Đã thêm học sinh mới vào lớp');
+      setShowAddStudentModal(false);
+      setNewStudentForm({ fullName: '', parentPhone: '', note: '' });
+      
+      const r = await api('getClassRoster', { classId: detail.ClassID }, user.email);
+      setRoster(r || []);
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setAddingStudent(false); }
   }
 
   async function removeStudent(studentId) {
@@ -532,6 +564,9 @@ export default function Classes() {
                     <button className="btn btn-primary btn-sm" onClick={enrollStudent} disabled={enrolling}>
                       {enrolling ? '...' : '+ Thêm'}
                     </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setShowAddStudentModal(true)}>
+                      + Tạo mới HS
+                    </button>
                     <label className="btn btn-secondary btn-sm" style={{ margin: 0, cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}>
                       {uploading ? '...' : '📁 Tải danh sách'}
                       <input type="file" accept=".xlsx, .xls" style={{ display: 'none' }} onChange={handleClassFileUpload} disabled={uploading} />
@@ -657,6 +692,32 @@ export default function Classes() {
               <option key={c.ClassID} value={c.ClassID}>{c.ClassName}</option>
             ))}
           </select>
+        </div>
+      </Modal>
+
+      {/* Add New Student Modal */}
+      <Modal
+        open={showAddStudentModal}
+        onClose={() => setShowAddStudentModal(false)}
+        title="Thêm học sinh mới vào lớp"
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setShowAddStudentModal(false)}>Hủy</button>
+          <button className="btn btn-primary" onClick={addNewStudentAndEnroll} disabled={addingStudent}>
+            {addingStudent ? 'Đang thêm...' : 'Thêm & Xếp lớp'}
+          </button>
+        </>}
+      >
+        <div className="form-group" style={{ marginBottom: 12 }}>
+          <label className="form-label">Tên học sinh *</label>
+          <input className="form-control" value={newStudentForm.fullName} onChange={e => setNewStudentForm(f => ({...f, fullName: e.target.value}))} placeholder="VD: Nguyễn Văn A" autoFocus />
+        </div>
+        <div className="form-group" style={{ marginBottom: 12 }}>
+          <label className="form-label">SĐT phụ huynh</label>
+          <input className="form-control" value={newStudentForm.parentPhone} onChange={e => setNewStudentForm(f => ({...f, parentPhone: e.target.value}))} placeholder="VD: 0987654321" />
+        </div>
+        <div className="form-group" style={{ marginBottom: 12 }}>
+          <label className="form-label">Ghi chú (nếu có)</label>
+          <input className="form-control" value={newStudentForm.note} onChange={e => setNewStudentForm(f => ({...f, note: e.target.value}))} placeholder="Ghi chú thêm..." />
         </div>
       </Modal>
     </div>
