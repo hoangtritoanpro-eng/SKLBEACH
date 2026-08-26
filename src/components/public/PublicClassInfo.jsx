@@ -12,6 +12,18 @@ export default function PublicClassInfo({ data }) {
   const allPoints = data?.points || [];
   const allStudents = data?.students || [];
 
+  const uniqueClasses = useMemo(() => {
+    const map = new Map();
+    classes.forEach(c => {
+      if (!map.has(c.ClassName)) {
+        map.set(c.ClassName, { ClassName: c.ClassName, ClassIDs: [c.ClassID] });
+      } else {
+        map.get(c.ClassName).ClassIDs.push(c.ClassID);
+      }
+    });
+    return Array.from(map.values());
+  }, [classes]);
+
   const allViolations = data?.violations || [];
 
   const { topRewarders, topViolators } = useMemo(() => {
@@ -74,8 +86,8 @@ export default function PublicClassInfo({ data }) {
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <select className="form-select" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
                 <option value="">-- Chọn lớp để xem sổ báo bài --</option>
-                {Array.from(new Map(classes.map(c => [c.ClassName, c])).values()).map(c => (
-                  <option key={c.ClassID} value={c.ClassID}>{c.ClassName}</option>
+                {uniqueClasses.map(c => (
+                  <option key={c.ClassName} value={c.ClassIDs.join(',')}>{c.ClassName}</option>
                 ))}
               </select>
             </div>

@@ -843,7 +843,10 @@ function getStudentReport(body) {
 function getLessons(body, email) {
   if (!body.public) requireAuth(email);
   var all = sheetToObjects(getSheet(SHEET.LESSONS));
-  if (body.classId) all = all.filter(function(r){ return r.ClassID === body.classId; });
+  if (body.classId) {
+    var classIds = String(body.classId).split(',');
+    all = all.filter(function(r){ return classIds.indexOf(String(r.ClassID)) !== -1; });
+  }
   return ok(all.sort(function(a,b){ return b.Date.localeCompare(a.Date); }));
 }
 
