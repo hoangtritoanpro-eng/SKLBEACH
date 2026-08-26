@@ -74,7 +74,9 @@ export default function PublicClassInfo({ data }) {
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <select className="form-select" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
                 <option value="">-- Chọn lớp để xem sổ báo bài --</option>
-                {classes.map(c => <option key={c.ClassID} value={c.ClassID}>{c.ClassName}</option>)}
+                {Array.from(new Map(classes.map(c => [c.ClassName, c])).values()).map(c => (
+                  <option key={c.ClassID} value={c.ClassID}>{c.ClassName}</option>
+                ))}
               </select>
             </div>
             
