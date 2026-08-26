@@ -12,32 +12,40 @@ export default function PublicClassInfo({ data }) {
   const allPoints = data?.points || [];
   const allStudents = data?.students || [];
 
+  const allViolations = data?.violations || [];
 
+  const { topRewarders, topViolators } = useMemo(() => {
+    const parseDate = (dStr) => {
+      if(!dStr) return 0;
+      const parts = dStr.split('/');
+      if(parts.length !== 3) return 0;
+      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+    };
+    const now = new Date().getTime();
+    const limit = now - 7 * 24 * 60 * 60 * 1000;
 
-  useEffect(() => {
-    if (activeTab === 'lessons') {
-      if (selectedClass) {
-        setLoading(true);
-        api('getLessons', { classId: selectedClass, public: true })
-          .then(lsns => setLessons(lsns || []))
-          .catch(e => setError(e.message))
-          .finally(() => setLoading(false));
-      } else {
-        setLessons([]);
-      }
-    }
-  }, [selectedClass, activeTab]);
-
-  const pointsStats = useMemo(() => {
-    const map = {};
-    allPoints.forEach(p => {
+    const recentPoints = allPoints.filter(p => parseDate(p.Date) >= limit);
+    const pMap = {};
+    recentPoints.forEach(p => {
       const s = allStudents.find(x => x.StudentID === p.StudentID);
       const name = s ? s.FullName : p.StudentID;
-      if (!map[name]) map[name] = 0;
-      map[name] += Number(p.PointsAdded) || 0;
+      if (!pMap[name]) pMap[name] = 0;
+      pMap[name] += Number(p.PointsAdded) || 1;
     });
-    return Object.keys(map).map(k => ({ name: k, total: map[k] })).sort((a,b) => b.total - a.total);
-  }, [allPoints, allStudents]);
+    const topRewarders = Object.keys(pMap).map(k => ({ name: k, total: pMap[k] })).sort((a,b) => b.total - a.total).slice(0, 3);
+
+    const recentVio = allViolations.filter(v => parseDate(v.Date) >= limit);
+    const vMap = {};
+    recentVio.forEach(v => {
+      const s = allStudents.find(x => x.StudentID === v.StudentID);
+      const name = s ? s.FullName : v.StudentID;
+      if (!vMap[name]) vMap[name] = 0;
+      vMap[name]++;
+    });
+    const topViolators = Object.keys(vMap).map(k => ({ name: k, total: vMap[k] })).sort((a,b) => b.total - a.total).slice(0, 3);
+
+    return { topRewarders, topViolators };
+  }, [allPoints, allViolations, allStudents]);
 
   if (!data) return (
     <div className="card">
@@ -55,6 +63,7 @@ export default function PublicClassInfo({ data }) {
         <div className="tabs" style={{ marginBottom: '20px' }}>
           <button className={`tab ${activeTab === 'lessons' ? 'active' : ''}`} onClick={() => setActiveTab('lessons')}>📖 Sổ báo bài</button>
           <button className={`tab ${activeTab === 'points' ? 'active' : ''}`} onClick={() => setActiveTab('points')}>⭐ Bảng vinh danh</button>
+          <button className={`tab ${activeTab === 'violations' ? 'active' : ''}`} onClick={() => setActiveTab('violations')}>⚠️ Bảng cảnh báo</button>
         </div>
 
         {error && <div className="login-error">{error}</div>}
@@ -92,17 +101,42 @@ export default function PublicClassInfo({ data }) {
 
         {!loading && activeTab === 'points' && (
           <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
-            {pointsStats.length === 0 ? <div className="empty-state">Chưa có dữ liệu khen thưởng</div> : (
+            {topRewarders.length === 0 ? <div className="empty-state">Chưa có dữ liệu khen thưởng tuần này</div> : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h5 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>🏆 Học sinh xuất sắc (Top Điểm)</h5>
-                {pointsStats.map((p, idx) => (
+                <h5 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>🏆 Top 3 Điểm Khen Thưởng (Tuần qua)</h5>
+                {topRewarders.map((p, idx) => (
                   <div key={p.name} style={{ padding: '10px 16px', border: '1px solid #bbf7d0', borderRadius: '8px', background: '#f0fdf4', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontWeight: 800, color: idx < 3 ? '#eab308' : '#94a3b8', fontSize: '1.1rem' }}>#{idx + 1}</span>
-                      <strong style={{ color: '#166534', fontSize: '0.95rem' }}>{p.name}</strong>
+                      <span style={{ fontWeight: 800, color: idx === 0 ? '#eab308' : idx === 1 ? '#94a3b8' : '#cd7f32', fontSize: '1.2rem' }}>
+                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                      </span>
+                      <strong style={{ color: '#166534', fontSize: '1rem' }}>{p.name}</strong>
                     </div>
-                    <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.85rem' }}>
-                      {p.total} ⭐
+                    <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.9rem' }}>
+                      +{p.total}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!loading && activeTab === 'violations' && (
+          <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
+            {topViolators.length === 0 ? <div className="empty-state">Không có học sinh vi phạm tuần này</div> : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <h5 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>⚠️ Top 3 Học Sinh Vi Phạm (Tuần qua)</h5>
+                {topViolators.map((v, idx) => (
+                  <div key={v.name} style={{ padding: '10px 16px', border: '1px solid #fecaca', borderRadius: '8px', background: '#fef2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontWeight: 800, color: 'var(--danger)', fontSize: '1.2rem' }}>
+                        {idx === 0 ? '🚩' : '🔸'}
+                      </span>
+                      <strong style={{ color: '#991b1b', fontSize: '1rem' }}>{v.name}</strong>
+                    </div>
+                    <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.9rem' }}>
+                      {v.total} lỗi
                     </span>
                   </div>
                 ))}

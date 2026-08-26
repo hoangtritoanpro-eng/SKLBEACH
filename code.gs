@@ -1201,6 +1201,7 @@ function getPublicDashboard(body, email) {
   var notices = sheetToObjects(getSheet(SHEET.NOTICES));
   var library = sheetToObjects(getSheet(SHEET.LIBRARY));
   var points = sheetToObjects(getSheet(SHEET.POINTS));
+  var violations = sheetToObjects(getSheet(SHEET.VIOLATIONS));
   var students = sheetToObjects(getSheet(SHEET.STUDENTS)).map(function(s) {
     return { StudentID: s.StudentID, FullName: s.FullName };
   });
@@ -1210,6 +1211,7 @@ function getPublicDashboard(body, email) {
     notices: notices,
     library: library,
     points: points,
+    violations: violations,
     students: students
   });
 }
