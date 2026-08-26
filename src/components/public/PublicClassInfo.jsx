@@ -16,13 +16,25 @@ export default function PublicClassInfo({ data }) {
     const map = new Map();
     classes.forEach(c => {
       if (!map.has(c.ClassName)) {
-        map.set(c.ClassName, { ClassName: c.ClassName, ClassIDs: [c.ClassID] });
-      } else {
-        map.get(c.ClassName).ClassIDs.push(c.ClassID);
+        map.set(c.ClassName, c);
       }
     });
     return Array.from(map.values());
   }, [classes]);
+
+  useEffect(() => {
+    if (activeTab === 'lessons') {
+      if (selectedClass) {
+        setLoading(true);
+        api('getLessons', { className: selectedClass, public: true })
+          .then(lsns => setLessons(lsns || []))
+          .catch(e => setError(e.message))
+          .finally(() => setLoading(false));
+      } else {
+        setLessons([]);
+      }
+    }
+  }, [selectedClass, activeTab]);
 
   const allViolations = data?.violations || [];
 
@@ -87,7 +99,7 @@ export default function PublicClassInfo({ data }) {
               <select className="form-select" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
                 <option value="">-- Chọn lớp để xem sổ báo bài --</option>
                 {uniqueClasses.map(c => (
-                  <option key={c.ClassName} value={c.ClassIDs.join(',')}>{c.ClassName}</option>
+                  <option key={c.ClassName} value={c.ClassName}>{c.ClassName}</option>
                 ))}
               </select>
             </div>
