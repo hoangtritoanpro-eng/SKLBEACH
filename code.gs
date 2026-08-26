@@ -764,11 +764,13 @@ function editUser(body, email) {
 // ────────────────────────────────────────────────────────────
 function getDashboard(body, email) {
   requireRole(email, ['ADMIN']);
-  var users    = sheetToObjects(getSheet(SHEET.USERS));
-  var classes  = sheetToObjects(getSheet(SHEET.CLASSES));
-  var students = sheetToObjects(getSheet(SHEET.STUDENTS));
-  var att      = sheetToObjects(getSheet(SHEET.ATTENDANCE));
-  var todayStr = today();
+  var users      = sheetToObjects(getSheet(SHEET.USERS));
+  var classes    = sheetToObjects(getSheet(SHEET.CLASSES));
+  var students   = sheetToObjects(getSheet(SHEET.STUDENTS));
+  var att        = sheetToObjects(getSheet(SHEET.ATTENDANCE));
+  var violations = sheetToObjects(getSheet(SHEET.VIOLATIONS));
+  var points     = sheetToObjects(getSheet(SHEET.POINTS));
+  var todayStr   = today();
 
   var attToday  = att.filter(function(a){ return a.Date === todayStr; });
   var presentToday = attToday.filter(function(a){ return a.Present === 'TRUE'; }).length;
@@ -780,6 +782,10 @@ function getDashboard(body, email) {
     totalTAs:       users.filter(function(u){ return u.Role === 'TA'      && u.Active === 'TRUE'; }).length,
     presentToday:   presentToday,
     totalAttToday:  attToday.length,
+    violations:     violations,
+    points:         points,
+    classes:        classes.map(function(c) { return { ClassID: c.ClassID, ClassName: c.ClassName }; }),
+    students:       students.map(function(s) { return { StudentID: s.StudentID, FullName: s.FullName }; }),
   });
 }
 
