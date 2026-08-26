@@ -51,40 +51,28 @@ export default function Dashboard() {
        if(!studentVioMap[v.StudentID]) studentVioMap[v.StudentID] = 0;
        studentVioMap[v.StudentID]++;
     });
-    let topVioId = null;
-    let maxVio = 0;
-    Object.keys(studentVioMap).forEach(sid => {
-       if (studentVioMap[sid] > maxVio) {
-          maxVio = studentVioMap[sid];
-          topVioId = sid;
-       }
-    });
-    let topViolator = null;
-    if (topVioId) {
-       const sInfo = stats.students?.find(s => s.StudentID === topVioId);
-       topViolator = { StudentID: topVioId, FullName: sInfo ? sInfo.FullName : topVioId, Count: maxVio };
-    }
+    const topViolators = Object.keys(studentVioMap)
+       .map(sid => {
+         const sInfo = stats.students?.find(s => s.StudentID === sid);
+         return { StudentID: sid, FullName: sInfo ? sInfo.FullName : sid, Count: studentVioMap[sid] };
+       })
+       .sort((a,b) => b.Count - a.Count)
+       .slice(0, 3);
 
     const studentPointMap = {};
     filteredPoints.forEach(p => {
        if(!studentPointMap[p.StudentID]) studentPointMap[p.StudentID] = 0;
        studentPointMap[p.StudentID] += Number(p.PointsAdded) || 1;
     });
-    let topPointId = null;
-    let maxPoint = 0;
-    Object.keys(studentPointMap).forEach(sid => {
-       if (studentPointMap[sid] > maxPoint) {
-          maxPoint = studentPointMap[sid];
-          topPointId = sid;
-       }
-    });
-    let topRewarder = null;
-    if (topPointId) {
-       const sInfo = stats.students?.find(s => s.StudentID === topPointId);
-       topRewarder = { StudentID: topPointId, FullName: sInfo ? sInfo.FullName : topPointId, Count: maxPoint };
-    }
+    const topRewarders = Object.keys(studentPointMap)
+       .map(sid => {
+         const sInfo = stats.students?.find(s => s.StudentID === sid);
+         return { StudentID: sid, FullName: sInfo ? sInfo.FullName : sid, Count: studentPointMap[sid] };
+       })
+       .sort((a,b) => b.Count - a.Count)
+       .slice(0, 3);
 
-    return { topClasses, topViolator, topRewarder };
+    return { topClasses, topViolators, topRewarders };
   }, [stats, filterPeriod]);
 
   if (loading) return (
@@ -180,37 +168,81 @@ export default function Dashboard() {
 
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>🏆 Học sinh nổi bật</span>
+            <span>🏆 Bảng Vinh Danh (Top 3)</span>
             <select className="input" style={{ width: 'auto', padding: '4px 8px', fontSize: '0.9rem', minHeight: 'auto' }} value={filterPeriod} onChange={e => setFilterPeriod(e.target.value)}>
               <option value="1_week">1 tuần qua</option>
               <option value="1_month">1 tháng qua</option>
               <option value="all">Tất cả</option>
             </select>
           </div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ background: 'var(--bg-light)', padding: '16px', borderRadius: 'var(--radius-sm)' }}>
-              <div style={{ color: 'var(--text-muted)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 600 }}>Vi phạm nhiều nhất</div>
-              {topViolator ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ fontSize: '1.1rem' }}>{topViolator.FullName}</strong>
-                  <span style={{ color: 'var(--danger)', fontWeight: 'bold', background: '#ffebee', padding: '4px 8px', borderRadius: '12px', fontSize: '0.9rem' }}>{topViolator.Count} lỗi</span>
-                </div>
-              ) : (
-                <div style={{ color: 'var(--text-muted)' }}>Chưa có dữ liệu</div>
-              )}
-            </div>
-            
-            <div style={{ background: 'var(--bg-light)', padding: '16px', borderRadius: 'var(--radius-sm)' }}>
-              <div style={{ color: 'var(--text-muted)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 600 }}>Khen thưởng nhiều nhất</div>
-              {topRewarder ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ fontSize: '1.1rem' }}>{topRewarder.FullName}</strong>
-                  <span style={{ color: 'var(--success)', fontWeight: 'bold', background: '#e8f5e9', padding: '4px 8px', borderRadius: '12px', fontSize: '0.9rem' }}>{topRewarder.Count} điểm</span>
-                </div>
-              ) : (
-                <div style={{ color: 'var(--text-muted)' }}>Chưa có dữ liệu</div>
-              )}
-            </div>
+          <div className="card-body" style={{ padding: '0' }}>
+            {topRewarders.length === 0 ? (
+              <div className="empty-state" style={{ padding: '20px' }}>
+                <p>Chưa có dữ liệu khen thưởng</p>
+              </div>
+            ) : (
+              <table className="table" style={{ margin: 0, border: 'none' }}>
+                <thead>
+                  <tr>
+                    <th style={{ background: 'var(--bg-light)' }}>Học sinh</th>
+                    <th style={{ textAlign: 'center', background: 'var(--bg-light)', width: '100px' }}>Điểm</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topRewarders.map((s, idx) => (
+                    <tr key={s.StudentID}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '1.2rem' }}>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>
+                          <strong style={{ fontSize: '1rem' }}>{s.FullName}</strong>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--success)' }}>+{s.Count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>⚠️ Bảng Cảnh Báo (Top 3)</span>
+            <select className="input" style={{ width: 'auto', padding: '4px 8px', fontSize: '0.9rem', minHeight: 'auto' }} value={filterPeriod} onChange={e => setFilterPeriod(e.target.value)}>
+              <option value="1_week">1 tuần qua</option>
+              <option value="1_month">1 tháng qua</option>
+              <option value="all">Tất cả</option>
+            </select>
+          </div>
+          <div className="card-body" style={{ padding: '0' }}>
+            {topViolators.length === 0 ? (
+              <div className="empty-state" style={{ padding: '20px' }}>
+                <p>Không có dữ liệu vi phạm</p>
+              </div>
+            ) : (
+              <table className="table" style={{ margin: 0, border: 'none' }}>
+                <thead>
+                  <tr>
+                    <th style={{ background: 'var(--bg-light)' }}>Học sinh</th>
+                    <th style={{ textAlign: 'center', background: 'var(--bg-light)', width: '100px' }}>Số lỗi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topViolators.map((s, idx) => (
+                    <tr key={s.StudentID}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '1.2rem', color: 'var(--danger)' }}>{idx === 0 ? '🚩' : '🔸'}</span>
+                          <strong style={{ fontSize: '1rem' }}>{s.FullName}</strong>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--danger)' }}>{s.Count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
