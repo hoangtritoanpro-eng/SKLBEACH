@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api, fmtDate } from '../../api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function PublicClassInfo({ data }) {
   const [selectedClass, setSelectedClass] = useState('');
@@ -60,15 +61,28 @@ export default function PublicClassInfo({ data }) {
 
     const recentVio = allViolations.filter(v => parseDate(v.Date) >= limit);
     const vMap = {};
+    const vClassMap = {};
     recentVio.forEach(v => {
       const s = allStudents.find(x => x.StudentID === v.StudentID);
       const name = s ? s.FullName : v.StudentID;
       if (!vMap[name]) vMap[name] = 0;
       vMap[name]++;
+      if (!vClassMap[name] && v.ClassID) {
+          const c = classes.find(cls => cls.ClassID === v.ClassID);
+          vClassMap[name] = c ? c.ClassName : v.ClassID;
+      }
     });
     const topViolators = Object.keys(vMap).map(k => ({ name: k, total: vMap[k] })).sort((a,b) => b.total - a.total).slice(0, 3);
+    
+    const topViolatorsChartData = Object.keys(vMap).map(k => {
+      const className = vClassMap[k] || '';
+      return { 
+        name: className ? `${k} (${className})` : k,
+        'Số vi phạm': vMap[k]
+      };
+    }).sort((a,b) => b['Số vi phạm'] - a['Số vi phạm']).slice(0, 10);
 
-    return { topRewarders, topViolators };
+    return { topRewarders, topViolators, topViolatorsChartData };
   }, [allPoints, allViolations, allStudents]);
 
   if (!data) return (
@@ -149,24 +163,25 @@ export default function PublicClassInfo({ data }) {
         )}
 
         {!loading && activeTab === 'violations' && (
-          <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
-            {topViolators.length === 0 ? <div className="empty-state">Không có học sinh vi phạm tuần này</div> : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h5 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>⚠️ Top 3 Học Sinh Vi Phạm (Tuần qua)</h5>
-                {topViolators.map((v, idx) => (
-                  <div key={v.name} style={{ padding: '10px 16px', border: '1px solid #fecaca', borderRadius: '8px', background: '#fef2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontWeight: 800, color: 'var(--danger)', fontSize: '1.2rem' }}>
-                        {idx === 0 ? '🚩' : '🔸'}
-                      </span>
-                      <strong style={{ color: '#991b1b', fontSize: '1rem' }}>{v.name}</strong>
-                    </div>
-                    <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.9rem' }}>
-                      {v.total} lỗi
-                    </span>
-                  </div>
-                ))}
+          <div style={{ maxHeight: '600px', overflowY: 'auto', paddingRight: '8px' }}>
+            {topViolatorsChartData && topViolatorsChartData.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h5 style={{ margin: '0', fontSize: '1rem', color: 'var(--text-muted)' }}>⚠️ Biểu Đồ Top Học Sinh Vi Phạm (Tuần qua)</h5>
+                <div style={{ width: '100%', height: 350 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topViolatorsChartData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend verticalAlign="top" height={36}/>
+                      <Bar dataKey="Số vi phạm" fill="var(--danger)" name="Số vi phạm" radius={[4, 4, 0, 0]} barSize={30} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
+            ) : (
+              <div className="empty-state">Không có học sinh vi phạm tuần này</div>
             )}
           </div>
         )}
