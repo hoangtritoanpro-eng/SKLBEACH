@@ -39,7 +39,7 @@ export default function PublicClassInfo({ data }) {
 
   const allViolations = data?.violations || [];
 
-  const { topRewarders, topViolators } = useMemo(() => {
+  const { topRewarders, topViolators, topViolatorsChartData } = useMemo(() => {
     const parseDate = (dStr) => {
       if(!dStr) return 0;
       const parts = dStr.split('/');
