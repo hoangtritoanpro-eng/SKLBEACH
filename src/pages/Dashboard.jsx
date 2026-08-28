@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -47,10 +48,15 @@ export default function Dashboard() {
        .slice(0, 4);
 
     const studentVioMap = {};
+    const studentClassMap = {};
     filteredViolations.forEach(v => {
        if(!studentVioMap[v.StudentID]) studentVioMap[v.StudentID] = 0;
        studentVioMap[v.StudentID]++;
+       if(!studentClassMap[v.StudentID] && v.ClassID) {
+           studentClassMap[v.StudentID] = v.ClassID;
+       }
     });
+
     const topViolators = Object.keys(studentVioMap)
        .map(sid => {
          const sInfo = stats.students?.find(s => s.StudentID === sid);
@@ -58,6 +64,21 @@ export default function Dashboard() {
        })
        .sort((a,b) => b.Count - a.Count)
        .slice(0, 3);
+
+    const topViolatorsChartData = Object.keys(studentVioMap)
+       .map(sid => {
+         const sInfo = stats.students?.find(s => s.StudentID === sid);
+         const cid = studentClassMap[sid];
+         const cInfo = stats.classes?.find(c => c.ClassID === cid);
+         const className = cInfo ? cInfo.ClassName : (cid || '');
+         const displayName = sInfo ? sInfo.FullName : sid;
+         return {
+           name: className ? `${displayName} (${className})` : displayName,
+           'Số vi phạm': studentVioMap[sid]
+         };
+       })
+       .sort((a,b) => b['Số vi phạm'] - a['Số vi phạm'])
+       .slice(0, 10);
 
     const studentPointMap = {};
     filteredPoints.forEach(p => {
@@ -72,7 +93,7 @@ export default function Dashboard() {
        .sort((a,b) => b.Count - a.Count)
        .slice(0, 3);
 
-    return { topClasses, topViolators, topRewarders };
+    return { topClasses, topViolators, topRewarders, topViolatorsChartData };
   }, [stats, filterPeriod]);
 
   if (loading) return (
@@ -131,6 +152,35 @@ export default function Dashboard() {
                 <div style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Tỉ lệ có mặt</div>
               </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '20px' }}>
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>📈 Top học sinh vi phạm của tất cả các lớp (Top 10)</span>
+          <select className="input" style={{ width: 'auto', padding: '4px 8px', fontSize: '0.9rem', minHeight: 'auto' }} value={filterPeriod} onChange={e => setFilterPeriod(e.target.value)}>
+            <option value="1_week">1 tuần qua</option>
+            <option value="1_month">1 tháng qua</option>
+            <option value="all">Tất cả</option>
+          </select>
+        </div>
+        <div className="card-body" style={{ height: 400, padding: '20px' }}>
+          {topViolatorsChartData && topViolatorsChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topViolatorsChartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend verticalAlign="top" height={36}/>
+                <Bar dataKey="Số vi phạm" fill="var(--danger)" name="Số vi phạm" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+             <div className="empty-state" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p>Không có dữ liệu vi phạm</p>
+             </div>
           )}
         </div>
       </div>

@@ -843,9 +843,15 @@ function getStudentReport(body) {
 function getLessons(body, email) {
   if (!body.public) requireAuth(email);
   var all = sheetToObjects(getSheet(SHEET.LESSONS));
-  if (body.classId) {
-    var classIds = String(body.classId).split(',');
-    all = all.filter(function(r){ return classIds.indexOf(String(r.ClassID)) !== -1; });
+  if (body.className) {
+    var allClasses = sheetToObjects(getSheet(SHEET.CLASSES));
+    var matchingIds = allClasses
+      .filter(function(c) { return String(c.ClassName).trim() === String(body.className).trim(); })
+      .map(function(c) { return String(c.ClassID).trim(); });
+    all = all.filter(function(r){ return matchingIds.indexOf(String(r.ClassID).trim()) !== -1; });
+  } else if (body.classId) {
+    var classIds = String(body.classId).split(',').map(function(id) { return id.trim(); });
+    all = all.filter(function(r){ return classIds.indexOf(String(r.ClassID).trim()) !== -1; });
   }
   return ok(all.sort(function(a,b){ return b.Date.localeCompare(a.Date); }));
 }
