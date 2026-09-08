@@ -4,6 +4,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 export default function PublicClassInfo({ data }) {
   const [selectedClass, setSelectedClass] = useState('');
+  const [selectedChartClass, setSelectedChartClass] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +41,7 @@ export default function PublicClassInfo({ data }) {
 
   const allViolations = data?.violations || [];
 
-  const { topRewarders, topViolators, topViolatorsChartData } = useMemo(() => {
+  const { topRewarders, topViolators, topViolatorsChartData, topRewardersChartData, fullRewarders, fullViolators } = useMemo(() => {
     const parseDate = (dStr) => {
       if(!dStr) return 0;
       const parts = dStr.split('/');
@@ -55,23 +57,32 @@ export default function PublicClassInfo({ data }) {
     recentPoints.forEach(p => {
       const s = allStudents.find(x => x.StudentID === p.StudentID);
       const name = s ? s.FullName : p.StudentID;
-      if (!pMap[name]) pMap[name] = 0;
-      pMap[name] += Number(p.PointsAdded) || 1;
-      if (!pClassMap[name]) {
+      
+      let className = '';
+      if (pClassMap[name] !== undefined) {
+          className = pClassMap[name];
+      } else {
           const classId = p.ClassID || (s ? s.ClassID : null);
           const c = classes.find(cls => cls.ClassID === classId);
-          pClassMap[name] = c ? c.ClassName : (classId || '');
+          className = c ? c.ClassName : (classId || '');
+          pClassMap[name] = className;
       }
+
+      if (selectedChartClass && className !== selectedChartClass) return;
+      if (searchTerm && !name.toLowerCase().includes(searchTerm.toLowerCase())) return;
+
+      if (!pMap[name]) pMap[name] = 0;
+      pMap[name] += Number(p.PointsAdded) || 1;
     });
-    const topRewarders = Object.keys(pMap).map(k => ({ name: k, total: pMap[k] })).sort((a,b) => b.total - a.total).slice(0, 3);
     
-    const topRewardersChartData = Object.keys(pMap).map(k => {
-      const className = pClassMap[k] || '';
-      return { 
-        name: className ? `${k} (${className})` : k,
-        'Điểm khen thưởng': pMap[k]
-      };
-    }).sort((a,b) => b['Điểm khen thưởng'] - a['Điểm khen thưởng']).slice(0, 10);
+    const sortedRewarders = Object.keys(pMap).map(k => ({ name: k, total: pMap[k], className: pClassMap[k] })).sort((a,b) => b.total - a.total);
+    const topRewarders = sortedRewarders.slice(0, 3);
+    const fullRewarders = sortedRewarders;
+    
+    const topRewardersChartData = sortedRewarders.map(r => ({
+      name: r.className ? `${r.name} (${r.className})` : r.name,
+      'Điểm khen thưởng': r.total
+    })).slice(0, (selectedChartClass || searchTerm) ? 50 : 10);
 
     const recentVio = allViolations.filter(v => parseDate(v.Date) >= limit);
     const vMap = {};
@@ -79,25 +90,35 @@ export default function PublicClassInfo({ data }) {
     recentVio.forEach(v => {
       const s = allStudents.find(x => x.StudentID === v.StudentID);
       const name = s ? s.FullName : v.StudentID;
+      
+      let className = '';
+      if (vClassMap[name] !== undefined) {
+          className = vClassMap[name];
+      } else {
+          const classId = v.ClassID || (s ? s.ClassID : null);
+          const c = classes.find(cls => cls.ClassID === classId);
+          className = c ? c.ClassName : (classId || '');
+          vClassMap[name] = className;
+      }
+
+      if (selectedChartClass && className !== selectedChartClass) return;
+      if (searchTerm && !name.toLowerCase().includes(searchTerm.toLowerCase())) return;
+
       if (!vMap[name]) vMap[name] = 0;
       vMap[name]++;
-      if (!vClassMap[name] && v.ClassID) {
-          const c = classes.find(cls => cls.ClassID === v.ClassID);
-          vClassMap[name] = c ? c.ClassName : v.ClassID;
-      }
     });
-    const topViolators = Object.keys(vMap).map(k => ({ name: k, total: vMap[k] })).sort((a,b) => b.total - a.total).slice(0, 3);
     
-    const topViolatorsChartData = Object.keys(vMap).map(k => {
-      const className = vClassMap[k] || '';
-      return { 
-        name: className ? `${k} (${className})` : k,
-        'Số vi phạm': vMap[k]
-      };
-    }).sort((a,b) => b['Số vi phạm'] - a['Số vi phạm']).slice(0, 10);
+    const sortedViolators = Object.keys(vMap).map(k => ({ name: k, total: vMap[k], className: vClassMap[k] })).sort((a,b) => b.total - a.total);
+    const topViolators = sortedViolators.slice(0, 3);
+    const fullViolators = sortedViolators;
+    
+    const topViolatorsChartData = sortedViolators.map(r => ({
+      name: r.className ? `${r.name} (${r.className})` : r.name,
+      'Số vi phạm': r.total
+    })).slice(0, (selectedChartClass || searchTerm) ? 50 : 10);
 
-    return { topRewarders, topViolators, topViolatorsChartData, topRewardersChartData };
-  }, [allPoints, allViolations, allStudents]);
+    return { topRewarders, topViolators, topViolatorsChartData, topRewardersChartData, fullRewarders, fullViolators };
+  }, [allPoints, allViolations, allStudents, selectedChartClass, searchTerm, classes]);
 
   if (!data) return (
     <div className="card">
@@ -120,6 +141,25 @@ export default function PublicClassInfo({ data }) {
 
         {error && <div className="login-error">{error}</div>}
         {loading && <div className="loading-state"><div className="spinner" /></div>}
+
+        {!loading && (activeTab === 'points' || activeTab === 'violations') && (
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <select className="form-select" style={{ flex: '1 1 200px' }} value={selectedChartClass} onChange={e => setSelectedChartClass(e.target.value)}>
+              <option value="">-- Tất cả các lớp --</option>
+              {uniqueClasses.map(c => (
+                <option key={c.ClassName} value={c.ClassName}>{c.ClassName}</option>
+              ))}
+            </select>
+            <input 
+              type="text" 
+              className="form-input" 
+              style={{ flex: '2 1 300px' }}
+              placeholder="Tìm tên học sinh..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+            />
+          </div>
+        )}
 
         {!loading && activeTab === 'lessons' && (
           <>
@@ -186,6 +226,33 @@ export default function PublicClassInfo({ data }) {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+                </div>
+                
+                {fullRewarders && fullRewarders.length > 0 && (
+                  <div style={{ marginTop: '24px' }}>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: 'var(--text-muted)' }}>📋 Danh Sách Chi Tiết</h5>
+                    <div className="table-responsive" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Học sinh</th>
+                            <th>Lớp</th>
+                            <th>Điểm</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {fullRewarders.map((r, i) => (
+                            <tr key={i}>
+                              <td>{r.name}</td>
+                              <td>{r.className}</td>
+                              <td><strong style={{ color: 'var(--success)' }}>+{r.total}</strong></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="empty-state">Chưa có dữ liệu khen thưởng tuần này</div>
@@ -210,6 +277,33 @@ export default function PublicClassInfo({ data }) {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+                </div>
+                
+                {fullViolators && fullViolators.length > 0 && (
+                  <div style={{ marginTop: '24px' }}>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: 'var(--text-muted)' }}>📋 Danh Sách Chi Tiết</h5>
+                    <div className="table-responsive" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Học sinh</th>
+                            <th>Lớp</th>
+                            <th>Số vi phạm</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {fullViolators.map((r, i) => (
+                            <tr key={i}>
+                              <td>{r.name}</td>
+                              <td>{r.className}</td>
+                              <td><strong style={{ color: 'var(--danger)' }}>{r.total}</strong></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="empty-state">Không có học sinh vi phạm tuần này</div>
