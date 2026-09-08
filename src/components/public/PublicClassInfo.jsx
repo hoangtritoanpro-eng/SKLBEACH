@@ -44,9 +44,14 @@ export default function PublicClassInfo({ data }) {
   const { topRewarders, topViolators, topViolatorsChartData, topRewardersChartData, fullRewarders, fullViolators } = useMemo(() => {
     const parseDate = (dStr) => {
       if(!dStr) return 0;
-      const parts = dStr.split('/');
-      if(parts.length !== 3) return 0;
-      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+      if (dStr.includes('/')) {
+        const parts = dStr.split('/');
+        if(parts.length === 3) {
+          return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+        }
+      }
+      const t = new Date(dStr).getTime();
+      return isNaN(t) ? 0 : t;
     };
     const now = new Date().getTime();
     const limit = now - 7 * 24 * 60 * 60 * 1000;
