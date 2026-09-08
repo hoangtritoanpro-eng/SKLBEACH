@@ -51,13 +51,27 @@ export default function PublicClassInfo({ data }) {
 
     const recentPoints = allPoints.filter(p => parseDate(p.Date) >= limit);
     const pMap = {};
+    const pClassMap = {};
     recentPoints.forEach(p => {
       const s = allStudents.find(x => x.StudentID === p.StudentID);
       const name = s ? s.FullName : p.StudentID;
       if (!pMap[name]) pMap[name] = 0;
       pMap[name] += Number(p.PointsAdded) || 1;
+      if (!pClassMap[name]) {
+          const classId = p.ClassID || (s ? s.ClassID : null);
+          const c = classes.find(cls => cls.ClassID === classId);
+          pClassMap[name] = c ? c.ClassName : (classId || '');
+      }
     });
     const topRewarders = Object.keys(pMap).map(k => ({ name: k, total: pMap[k] })).sort((a,b) => b.total - a.total).slice(0, 3);
+    
+    const topRewardersChartData = Object.keys(pMap).map(k => {
+      const className = pClassMap[k] || '';
+      return { 
+        name: className ? `${k} (${className})` : k,
+        'Điểm khen thưởng': pMap[k]
+      };
+    }).sort((a,b) => b['Điểm khen thưởng'] - a['Điểm khen thưởng']).slice(0, 10);
 
     const recentVio = allViolations.filter(v => parseDate(v.Date) >= limit);
     const vMap = {};
@@ -82,7 +96,7 @@ export default function PublicClassInfo({ data }) {
       };
     }).sort((a,b) => b['Số vi phạm'] - a['Số vi phạm']).slice(0, 10);
 
-    return { topRewarders, topViolators, topViolatorsChartData };
+    return { topRewarders, topViolators, topViolatorsChartData, topRewardersChartData };
   }, [allPoints, allViolations, allStudents]);
 
   if (!data) return (
@@ -140,24 +154,41 @@ export default function PublicClassInfo({ data }) {
         )}
 
         {!loading && activeTab === 'points' && (
-          <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
-            {topRewarders.length === 0 ? <div className="empty-state">Chưa có dữ liệu khen thưởng tuần này</div> : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ maxHeight: '600px', overflowY: 'auto', paddingRight: '8px' }}>
+            {topRewardersChartData && topRewardersChartData.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h5 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>🏆 Top 3 Điểm Khen Thưởng (Tuần qua)</h5>
-                {topRewarders.map((p, idx) => (
-                  <div key={p.name} style={{ padding: '10px 16px', border: '1px solid #bbf7d0', borderRadius: '8px', background: '#f0fdf4', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontWeight: 800, color: idx === 0 ? '#eab308' : idx === 1 ? '#94a3b8' : '#cd7f32', fontSize: '1.2rem' }}>
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                  {topRewarders.map((p, idx) => (
+                    <div key={p.name} style={{ padding: '10px 16px', border: '1px solid #bbf7d0', borderRadius: '8px', background: '#f0fdf4', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontWeight: 800, color: idx === 0 ? '#eab308' : idx === 1 ? '#94a3b8' : '#cd7f32', fontSize: '1.2rem' }}>
+                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                        </span>
+                        <strong style={{ color: '#166534', fontSize: '1rem' }}>{p.name}</strong>
+                      </div>
+                      <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.9rem' }}>
+                        +{p.total}
                       </span>
-                      <strong style={{ color: '#166534', fontSize: '1rem' }}>{p.name}</strong>
                     </div>
-                    <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.9rem' }}>
-                      +{p.total}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <h5 style={{ margin: '0', fontSize: '1rem', color: 'var(--text-muted)' }}>🌟 Biểu Đồ Top Học Sinh Khen Thưởng (Tuần qua)</h5>
+                <div style={{ width: '100%', height: 350 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topRewardersChartData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend verticalAlign="top" height={36}/>
+                      <Bar dataKey="Điểm khen thưởng" fill="#10b981" name="Điểm khen thưởng" radius={[4, 4, 0, 0]} barSize={30} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
+            ) : (
+              <div className="empty-state">Chưa có dữ liệu khen thưởng tuần này</div>
             )}
           </div>
         )}
