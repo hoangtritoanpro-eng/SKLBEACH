@@ -226,7 +226,6 @@ export default function PublicClassInfo({ data }) {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                </div>
                 
                 {fullRewarders && fullRewarders.length > 0 && (
                   <div style={{ marginTop: '24px' }}>
@@ -276,7 +275,6 @@ export default function PublicClassInfo({ data }) {
                       <Bar dataKey="Số vi phạm" fill="var(--danger)" name="Số vi phạm" radius={[4, 4, 0, 0]} barSize={30} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
                 </div>
                 
                 {fullViolators && fullViolators.length > 0 && (
